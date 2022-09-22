@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
+const imgSchema = new Schema(
+  {
+    path: { type: String }
+  },
+  { timestamps: true }
+);
 
 const userSchema = new Schema(
   {
@@ -16,10 +22,11 @@ const userSchema = new Schema(
     password: { type: String, required: true },
     approved: { type: Boolean, default: false },
     profileImg: { type: String },
-    gallery: [{ type: String }],
+    gallery: [imgSchema]
   },
   { timestamps: true }
 );
+
 
 const UserModel = mongoose.model("User", userSchema);
 
