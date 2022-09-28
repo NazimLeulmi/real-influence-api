@@ -6,6 +6,8 @@ const bcrypt = require("bcrypt");
 const session = require("express-session");
 const multer = require("multer");
 const path = require("path");
+const sharp = require("sharp");
+const fs = require("fs");
 
 let app = express();
 
@@ -14,14 +16,7 @@ app.use("/static", express.static("static"));
 
 app.use(express.json({ limit: "50mb" }));
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'static');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
@@ -34,7 +29,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     proxy: true,
-    cookie: { secure: true, maxAge: 1000 * 60 * 60 * 8 },
+    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 },
   })
 );
 
@@ -120,6 +115,15 @@ app.post("/signup", signUpFields, async (req, res) => {
         error: "The email has been used already",
       });
     }
+    fs.access("./static",err=>{
+     if(err){
+	fs.mkdirSync("./static");
+	console.log("Created static folder");
+     }
+    })
+    await sharp(req.files.profileImage[0].buffer).resize({
+      width:1080,height:1080
+    }).toFile("./static/"+req.files.profileImage[0].originalname);
     const hash = await bcrypt.hash(req.body.password, 12);
     const userModel = new models.UserModel({
       name: req.body.name,
@@ -128,7 +132,7 @@ app.post("/signup", signUpFields, async (req, res) => {
       isoCode: req.body.isoCode,
       number: req.body.number,
       password: hash,
-      profileImg: req.files.profileImage[0].path,
+      profileImg: "static/"+req.files.profileImage[0].originalname,
     });
     const userEntry = await userModel.save().catch((err) => console.log(err));
     return res.json({ success: true });
@@ -203,11 +207,14 @@ app.post("/galleryImage", upload.single("galleryImage"), async (req, res) => {
     console.log("Restricted route");
     return res.json({ access: "restricted" });
   }
+await sharp(req.file.buffer).resize({
+      width:1080,height:1080
+    }).toFile("./static/"+req.file.originalname);
 
   const updated = await models.UserModel.findOneAndUpdate(
     { _id: req.session.userId },
     {
-      $push: { gallery: { path: req.file.path } }
+      $push: { gallery: { path: "static/"+req.file.originalname } }
     },
     { new: true }
   );
