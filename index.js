@@ -8,8 +8,15 @@ const multer = require("multer");
 const path = require("path");
 const sharp = require("sharp");
 const fs = require("fs");
+const helmet = require("helmet");
+const compression = require('compression')
 
 let app = express();
+
+// security layer
+app.use(helmet());
+// compression
+app.use(compression())
 
 
 app.use("/static", express.static("static"));
@@ -29,14 +36,14 @@ app.use(
     resave: false,
     saveUninitialized: false,
     proxy: true,
-    cookie: { secure: false, maxAge: 1000 * 60 * 60 * 8 },
+    cookie: { secure: true, maxAge: 1000 * 60 * 60 * 8 },
   })
 );
 
 // Mongo Database Connection
 connectDB().catch((err) => console.log(err));
 async function connectDB() {
-  await mongoose.connect("mongodb://localhost:27017/miss-influencer");
+  await mongoose.connect("mongodb://localhost:1999/real-influence");
   console.log("Connected to Mongo Database");
 }
 
@@ -50,7 +57,6 @@ app.post("/signin", async (req, res) => {
   if (!isValid) return res.json({ isValid: false, errors });
   const user = await models.UserModel.findOne({ email: req.body.email.toLowerCase() });
   if (!user) {
-    console.log("The user doesn't exist");
     return res.json({
       isValid: false,
       error: "The user doesn't exist",
@@ -58,14 +64,12 @@ app.post("/signin", async (req, res) => {
   }
   const isCorrect = await bcrypt.compare(req.body.password, user.password);
   if (!isCorrect) {
-    console.log("The password is incorrect");
     return res.json({
       isValid: false,
       error: "The password is invalid",
     });
   }
   if (user.approved === false) {
-    console.log("The user isn't approved");
     return res.json({
       isValid: false,
       error: "Your account has to be approved",
@@ -104,7 +108,6 @@ app.post("/signup", signUpFields, async (req, res) => {
   try {
     const { isValid, errors } = validation.validateSignUp(req.body);
     if (isValid === false) {
-      console.log({ success: false, errors });
       return;
     }
     const duplicate = await models.UserModel.findOne({ email: req.body.email.toLowerCase() });
@@ -143,7 +146,6 @@ app.post("/signup", signUpFields, async (req, res) => {
 
 app.get("/check-auth", async (req, res) => {
   if (req.session.userId) {
-    console.log("User signed in");
     const user = await models.UserModel.findById(req.session.userId).catch(
       (err) => console.log(err)
     );
