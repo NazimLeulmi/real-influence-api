@@ -5,19 +5,31 @@ const models = require("./models");
 const bcrypt = require("bcrypt");
 const session = require("express-session");
 const multer = require("multer");
-const path = require("path");
 const sharp = require("sharp");
 const fs = require("fs");
 const helmet = require("helmet");
-const compression = require('compression')
+const compression = require("compression");
+const cors = require("cors");
 
 let app = express();
+
+// cross origin scripting
+
+app.use(
+  cors({
+    origin: [
+      "http://localhost:8888",
+      "http://localhost:3000",
+      "http://localhost",
+    ],
+    credentials: true,
+  })
+);
 
 // security layer
 app.use(helmet());
 // compression
-app.use(compression())
-
+app.use(compression());
 
 app.use("/static", express.static("static"));
 
@@ -43,19 +55,20 @@ app.use(
 // Mongo Database Connection
 connectDB().catch((err) => console.log(err));
 async function connectDB() {
-  await mongoose.connect("mongodb://localhost:1999/real-influence");
+  await mongoose.connect("mongodb://localhost:27017/real-influence");
   console.log("Connected to Mongo Database");
 }
 
-
 app.get("/", async (req, res) => {
   res.send("<h1>Real Influence</h1>");
-})
+});
 
 app.post("/signin", async (req, res) => {
   const { isValid, errors } = validation.validateSignIn(req.body.email);
   if (!isValid) return res.json({ isValid: false, errors });
-  const user = await models.UserModel.findOne({ email: req.body.email.toLowerCase() });
+  const user = await models.UserModel.findOne({
+    email: req.body.email.toLowerCase(),
+  });
   if (!user) {
     return res.json({
       isValid: false,
@@ -110,7 +123,9 @@ app.post("/signup", signUpFields, async (req, res) => {
     if (isValid === false) {
       return;
     }
-    const duplicate = await models.UserModel.findOne({ email: req.body.email.toLowerCase() });
+    const duplicate = await models.UserModel.findOne({
+      email: req.body.email.toLowerCase(),
+    });
     if (duplicate) {
       console.log("Duplicate email");
       return res.json({
@@ -118,15 +133,18 @@ app.post("/signup", signUpFields, async (req, res) => {
         error: "The email has been used already",
       });
     }
-    fs.access("./static",err=>{
-     if(err){
-	fs.mkdirSync("./static");
-	console.log("Created static folder");
-     }
-    })
-    await sharp(req.files.profileImage[0].buffer).resize({
-      width:1080,height:1080
-    }).toFile("./static/"+req.files.profileImage[0].originalname);
+    fs.access("./static", (err) => {
+      if (err) {
+        fs.mkdirSync("./static");
+        console.log("Created static folder");
+      }
+    });
+    await sharp(req.files.profileImage[0].buffer)
+      .resize({
+        width: 1080,
+        height: 1080,
+      })
+      .toFile("./static/" + req.files.profileImage[0].originalname);
     const hash = await bcrypt.hash(req.body.password, 12);
     const userModel = new models.UserModel({
       name: req.body.name,
@@ -135,7 +153,7 @@ app.post("/signup", signUpFields, async (req, res) => {
       isoCode: req.body.isoCode,
       number: req.body.number,
       password: hash,
-      profileImg: "static/"+req.files.profileImage[0].originalname,
+      profileImg: "static/" + req.files.profileImage[0].originalname,
     });
     const userEntry = await userModel.save().catch((err) => console.log(err));
     return res.json({ success: true });
@@ -188,7 +206,6 @@ app.post("/bio", async (req, res) => {
   return res.json({ success: true, user: updated });
 });
 
-
 app.post("/profileImage", upload.single("profileImage"), async (req, res) => {
   if (!req.session.userId) {
     console.log("Restricted route");
@@ -209,14 +226,17 @@ app.post("/galleryImage", upload.single("galleryImage"), async (req, res) => {
     console.log("Restricted route");
     return res.json({ access: "restricted" });
   }
-await sharp(req.file.buffer).resize({
-      width:1080,height:1080
-    }).toFile("./static/"+req.file.originalname);
+  await sharp(req.file.buffer)
+    .resize({
+      width: 1080,
+      height: 1080,
+    })
+    .toFile("./static/" + req.file.originalname);
 
   const updated = await models.UserModel.findOneAndUpdate(
     { _id: req.session.userId },
     {
-      $push: { gallery: { path: "static/"+req.file.originalname } }
+      $push: { gallery: { path: "static/" + req.file.originalname } },
     },
     { new: true }
   );
@@ -226,14 +246,81 @@ await sharp(req.file.buffer).resize({
 app.get("/users", async (req, res) => {
   if (!req.session.userId) {
     console.log(req.session);
-    console.log("restricted route")
+    console.log("restricted route");
     return res.json({ access: "restricted" });
   }
   console.log("getting users");
 
-  const users = await models.UserModel.find().select('id name bio email profileImg gallery approved');
+  const users = await models.UserModel.find().select(
+    "id name bio email profileImg gallery approved"
+  );
   console.log(users);
   return res.json({ success: true, influencers: users });
+});
+
+app.post("/admin-signup", async (req, res) => {
+  const { isValid, errors } = validation.validateAdminSignUp(req.body);
+  if (!isValid) return res.json({ isValid, errors });
+  try {
+    let dupUser = await models.AdminModel.findOne({ email: req.body.email });
+    if (dupUser)
+      return res.json({
+        isValid: false,
+        errors: { email: "The email has been used by another admin" },
+      });
+    const { email, password } = req.body;
+    const hash = await bcrypt.hash(password, 12);
+    const newAdmin = new models.AdminModel({
+      email: email,
+      password: hash,
+      approved: false,
+    });
+    const adminEntry = await newAdmin.save().catch((err) => console.log(err));
+    console.log("Registered admin account", adminEntry);
+    return res.json({ isValid: true });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false });
+  }
+});
+app.post("/admin-signin", async (req, res) => {
+  console.log("Admin Sign in");
+  const { isValid, errors } = validation.validateSignIn(req.body.email);
+  if (!isValid) return res.json({ isValid: false, errors });
+  const admin = await models.AdminModel.findOne({
+    email: req.body.email.toLowerCase(),
+  });
+  if (!admin) {
+    return res.json({
+      isValid: false,
+      error: "The user doesn't exist",
+    });
+  }
+  const isCorrect = await bcrypt.compare(req.body.password, admin.password);
+  if (!isCorrect) {
+    return res.json({
+      isValid: false,
+      error: "The password is invalid",
+    });
+  }
+  if (admin.approved === false) {
+    return res.json({
+      isValid: false,
+      error: "Your account has to be approved",
+    });
+  }
+  // The admin login data is correct
+  req.session.id = admin._id;
+  req.session.email = admin.email;
+  req.session.approved = admin.approved;
+  return res.json({
+    success: true,
+    admin: {
+      id: admin._id,
+      email: admin.email,
+      approved: admin.approved,
+    },
+  });
 });
 
 app.listen(8888, () => console.log("Node.js server running on port 8888"));

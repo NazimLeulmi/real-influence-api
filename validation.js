@@ -79,4 +79,33 @@ function validateSignIn(email) {
   return { isValid: error === "" ? true : false, error };
 }
 
-module.exports = { validateSignUp, validateSignIn };
+function validateAdminSignUp(data) {
+  const { email, password, passwordc } = data;
+  const errors = {
+    email: "",
+    password: "",
+    passwordc: "",
+  };
+  // Email input validation
+  if (email === "" || email === null || email === undefined) {
+    errors.email = "The email address is required";
+  } else if (!validator.isEmail(email)) {
+    errors.email = "The email address is invalid";
+  } else if (email.length > 60) {
+    errors.email = "The maximum length is 60 characters";
+  }
+  // Password input validation
+  if (password === "" || password === null || password === undefined) {
+    errors.password = "The password is required";
+  } else if (password.length < 8) {
+    errors.password = "The minimum length is 8 characters";
+  }
+  if (passwordc === "" || passwordc === null || passwordc === undefined) {
+    errors.passwordc = "The password confirmation is required";
+  } else if (!validator.equals(password, passwordc)) {
+    errors.passwordc = "The password confirmation doesn't match";
+  }
+  const errorsString = errors.email + errors.password + errors.passwordc;
+  return { isValid: errorsString === "" ? true : false, errors };
+}
+module.exports = { validateSignUp, validateSignIn, validateAdminSignUp };

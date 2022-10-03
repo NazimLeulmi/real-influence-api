@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const imgSchema = new Schema(
   {
-    path: { type: String }
+    path: { type: String },
   },
   { timestamps: true }
 );
@@ -22,12 +22,21 @@ const userSchema = new Schema(
     password: { type: String, required: true },
     approved: { type: Boolean, default: false },
     profileImg: { type: String },
-    gallery: [imgSchema]
+    gallery: [imgSchema],
   },
   { timestamps: true }
 );
 
+const adminSchema = new Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    approved: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
 
 const UserModel = mongoose.model("User", userSchema);
+const AdminModel = mongoose.model("Admin", adminSchema);
 
-module.exports = { UserModel };
+module.exports = { UserModel, AdminModel };
