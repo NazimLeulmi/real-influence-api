@@ -30,8 +30,9 @@ const userSchema = new Schema(
 const adminSchema = new Schema(
   {
     email: { type: String, required: true, unique: true },
+    username: { type: String, required: true },
     password: { type: String, required: true },
-    approved: { type: Boolean, default: false },
+    super: { type: Boolean, required: true, default: false },
   },
   { timestamps: true }
 );

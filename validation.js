@@ -80,12 +80,16 @@ function validateSignIn(email) {
 }
 
 function validateAdminSignUp(data) {
-  const { email, password, passwordc } = data;
+  const { email, password, passwordc, username } = data;
   const errors = {
     email: "",
     password: "",
     passwordc: "",
+    username: "",
   };
+  if (username === "" || username === null || username === undefined) {
+    errors.username = "The username is required";
+  }
   // Email input validation
   if (email === "" || email === null || email === undefined) {
     errors.email = "The email address is required";
@@ -105,7 +109,8 @@ function validateAdminSignUp(data) {
   } else if (!validator.equals(password, passwordc)) {
     errors.passwordc = "The password confirmation doesn't match";
   }
-  const errorsString = errors.email + errors.password + errors.passwordc;
+  const errorsString =
+    errors.email + errors.password + errors.passwordc + errors.username;
   return { isValid: errorsString === "" ? true : false, errors };
 }
 module.exports = { validateSignUp, validateSignIn, validateAdminSignUp };

@@ -10,9 +10,9 @@ const fs = require("fs");
 const helmet = require("helmet");
 const compression = require("compression");
 const cors = require("cors");
+const MongoStore = require("connect-mongo");
 
 let app = express();
-
 // cross origin scripting
 
 app.use(
@@ -42,22 +42,33 @@ const upload = multer({
   limits: { fieldSize: 100 * 1024 * 1024 },
 });
 
-app.use(
-  session({
-    secret: "my very important session secret",
-    resave: false,
-    saveUninitialized: false,
-    proxy: true,
-    cookie: { secure: true, maxAge: 1000 * 60 * 60 * 8 },
-  })
-);
-
 // Mongo Database Connection
 connectDB().catch((err) => console.log(err));
 async function connectDB() {
   await mongoose.connect("mongodb://localhost:27017/real-influence");
   console.log("Connected to Mongo Database");
 }
+
+app.use(
+  session({
+    secret: "my very important session secret",
+    resave: true,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      client: mongoose.connection.getClient(),
+      dbName: "real-influence",
+      collectionName: "express-sessions",
+    }),
+    // proxy: true,
+    // maxAge : 8 hours
+    cookie: {
+      secure: false,
+      maxAge: 480 * 60 * 1000,
+      httpOnly: true,
+      sameSite: "none",
+    },
+  })
+);
 
 app.get("/", async (req, res) => {
   res.send("<h1>Real Influence</h1>");
@@ -244,18 +255,19 @@ app.post("/galleryImage", upload.single("galleryImage"), async (req, res) => {
 });
 // GET influencers
 app.get("/users", async (req, res) => {
-  if (!req.session.userId) {
-    console.log(req.session);
-    console.log("restricted route");
-    return res.json({ access: "restricted" });
-  }
-  console.log("getting users");
+  console.log("Getting users");
+  // if (!req.session.adminId) {
+  //   console.log(req.session);
+  //   console.log("restricted route");
+  //   return res.json({ access: "restricted" });
+  // }
+  console.log(req.session);
 
-  const users = await models.UserModel.find().select(
-    "id name bio email profileImg gallery approved"
-  );
-  console.log(users);
-  return res.json({ success: true, influencers: users });
+  // const users = await models.UserModel.find().select(
+  //   "id name bio email profileImg gallery approved"
+  // );
+  // console.log(users);
+  // return res.json({ success: true, influencers: users });
 });
 
 app.post("/admin-signup", async (req, res) => {
@@ -268,10 +280,11 @@ app.post("/admin-signup", async (req, res) => {
         isValid: false,
         errors: { email: "The email has been used by another admin" },
       });
-    const { email, password } = req.body;
+    const { email, password, username } = req.body;
     const hash = await bcrypt.hash(password, 12);
     const newAdmin = new models.AdminModel({
       email: email,
+      username: username,
       password: hash,
       approved: false,
     });
@@ -303,22 +316,16 @@ app.post("/admin-signin", async (req, res) => {
       error: "The password is invalid",
     });
   }
-  if (admin.approved === false) {
-    return res.json({
-      isValid: false,
-      error: "Your account has to be approved",
-    });
-  }
-  // The admin login data is correct
-  req.session.id = admin._id;
+  req.session.adminId = admin._id.toHexString();
+  req.session.username = admin.username;
   req.session.email = admin.email;
-  req.session.approved = admin.approved;
+  console.log(req.session);
   return res.json({
     success: true,
     admin: {
-      id: admin._id,
+      adminId: admin._id.toHexString(),
       email: admin.email,
-      approved: admin.approved,
+      super: admin.super,
     },
   });
 });
