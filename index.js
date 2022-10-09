@@ -58,6 +58,7 @@ app.use(
       client: mongoose.connection.getClient(),
       dbName: "real-influence",
       collectionName: "express-sessions",
+      ttl: 480 * 60 * 1000,
     }),
     // proxy: true,
     // maxAge : 8 hours
@@ -65,7 +66,6 @@ app.use(
       secure: false,
       maxAge: 480 * 60 * 1000,
       httpOnly: true,
-      sameSite: "none",
     },
   })
 );
@@ -255,21 +255,38 @@ app.post("/galleryImage", upload.single("galleryImage"), async (req, res) => {
 });
 // GET influencers
 app.get("/users", async (req, res) => {
-  console.log("Getting users");
-  // if (!req.session.adminId) {
-  //   console.log(req.session);
-  //   console.log("restricted route");
-  //   return res.json({ access: "restricted" });
-  // }
-  console.log(req.session);
-
-  // const users = await models.UserModel.find().select(
-  //   "id name bio email profileImg gallery approved"
-  // );
-  // console.log(users);
-  // return res.json({ success: true, influencers: users });
+  if (!req.session.adminId && !req.session.userId) {
+    console.log(req.session);
+    console.log("restricted route");
+    return res.json({ access: "restricted" });
+  }
+  const users = await models.UserModel.find().select(
+    "id name bio email profileImg gallery approved"
+  );
+  return res.json({ success: true, influencers: users });
 });
 
+app.get("/influencers-table", async (req, res) => {
+  if (!req.session.adminId) {
+    console.log(req.session);
+    console.log("restricted route");
+    return res.json({ access: "restricted" });
+  }
+  const users = await models.UserModel.find().select(
+    "id name bio email profileImg approved"
+  );
+  return res.json({ success: true, influencers: users });
+});
+
+app.get("/admins", async (req, res) => {
+  if (!req.session.adminId) {
+    console.log(req.session);
+    console.log("restricted route");
+    return res.json({ access: "restricted" });
+  }
+  const admins = await models.AdminModel.find();
+  return res.json({ success: true, admins: admins });
+});
 app.post("/admin-signup", async (req, res) => {
   const { isValid, errors } = validation.validateAdminSignUp(req.body);
   if (!isValid) return res.json({ isValid, errors });
@@ -286,7 +303,7 @@ app.post("/admin-signup", async (req, res) => {
       email: email,
       username: username,
       password: hash,
-      approved: false,
+      super: false,
     });
     const adminEntry = await newAdmin.save().catch((err) => console.log(err));
     console.log("Registered admin account", adminEntry);
@@ -329,5 +346,59 @@ app.post("/admin-signin", async (req, res) => {
     },
   });
 });
+app.post("/delete-admin", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+  const superAdmin = await models.AdminModel.findById(req.session.adminId);
+  if (superAdmin.super === false) {
+    console.log("Restricted Access");
+    return res.json({ access: "restricted" });
+  }
 
+  const admin = await models.AdminModel.findById(req.body.id);
+  if (admin.super === true) {
+    console.log("You can't delete a super admin");
+    return res.json({ access: "restricted" });
+  }
+
+  await admin.delete();
+
+  return res.json({ success: true });
+
+  // const updated = await models.UserModel.findOneAndUpdate(
+  //   { _id: req.body.id },
+  //   { approved: true },
+  //   { new: true }
+  // ).select("id name bio email profileImg approved");
+  // console.log(updated, "Approved");
+  // return res.json({ success: true, user: updated });
+});
+
+app.post("/approve", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+
+  const updated = await models.UserModel.findOneAndUpdate(
+    { _id: req.body.id },
+    { approved: true },
+    { new: true }
+  ).select("id name bio email profileImg approved");
+  console.log(updated, "Approved");
+  return res.json({ success: true, user: updated });
+});
+app.post("/revoke", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+
+  const updated = await models.UserModel.findOneAndUpdate(
+    { _id: req.body.id },
+    { approved: false },
+    { new: true }
+  ).select("id name bio email profileImg approved");
+  console.log(updated, "Revoked");
+  return res.json({ success: true, user: updated });
+});
 app.listen(8888, () => console.log("Node.js server running on port 8888"));
