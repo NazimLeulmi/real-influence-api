@@ -11,6 +11,19 @@ const userSchema = new Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    isoCode: { type: String, required: true },
+    dialCode: { type: String, required: true },
+    number: { type: String, required: true },
+    password: { type: String, required: true },
+    approved: { type: Boolean, default: false },
+    otp: { type: String },
+  },
+  { timestamps: true }
+);
+const influencerSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
     bio: {
       type: String,
       required: true,
@@ -38,6 +51,7 @@ const adminSchema = new Schema(
 );
 
 const UserModel = mongoose.model("User", userSchema);
+const InfluencerModel = mongoose.model("Influencer", influencerSchema);
 const AdminModel = mongoose.model("Admin", adminSchema);
 
-module.exports = { UserModel, AdminModel };
+module.exports = { UserModel, AdminModel, InfluencerModel };
