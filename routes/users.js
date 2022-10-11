@@ -37,4 +37,46 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+router.post("/signin", async (req, res) => {
+  try {
+    const { isValid, errors } = validation.validateSignIn(req.body.email);
+    if (!isValid) return res.json({ isValid: false, errors });
+    const user = await models.UserModel.findOne({
+      email: req.body.email.toLowerCase(),
+    });
+    if (!user) {
+      return res.json({
+        isValid: false,
+        error: "The user doesn't exist",
+      });
+    }
+    const isCorrect = await bcrypt.compare(req.body.password, user.password);
+    if (!isCorrect) {
+      return res.json({
+        isValid: false,
+        error: "The password is invalid",
+      });
+    }
+    if (user.approved === false) {
+      return res.json({
+        isValid: false,
+        error: "Your account has to be approved",
+      });
+    }
+    // The influencer login data is correct
+    req.session.userId = user._id;
+    return res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        approved: user.approved,
+        type: user.type,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+  }
+});
 module.exports = router;
