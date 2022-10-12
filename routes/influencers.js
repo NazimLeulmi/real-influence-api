@@ -1,30 +1,68 @@
 const express = require("express");
 const validation = require("../validation");
-const models = require("../models");
 const bcrypt = require("bcrypt");
 const router = express.Router();
 const sharp = require("sharp");
 const fs = require("fs");
-
 const multer = require("multer");
-const { model } = require("mongoose");
+const InfluencerModel = require("../models/influencer");
+const ImageModel = require("../models/image");
+const LikeModel = require("../models/like");
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: { fieldSize: 100 * 1024 * 1024 },
 });
 
+router.get("/", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const influencers = await InfluencerModel.find().select(
+      "id name bio email profileImg approved type"
+    );
+    return res.json({ influencers: influencers });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/likes/:id", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const likes = await LikeModel.find({ influencer: req.params.id });
+    return res.json({ likes: likes });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+router.get("/gallery/:id", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const gallery = await ImageModel.find({ influencer: req.params.id });
+    return res.json({ gallery: gallery });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.post("/signin", async (req, res) => {
   try {
+    console.log("Trying to sign in");
     const { isValid, errors } = validation.validateSignIn(req.body.email);
     if (!isValid) return res.json({ isValid: false, errors });
-    const user = await models.InfluencerModel.findOne({
+    const user = await InfluencerModel.findOne({
       email: req.body.email.toLowerCase(),
-    }).populate({
-      path: "gallery",
-      populate: {
-        path: "likes",
-      },
     });
     if (!user) {
       return res.json({
@@ -55,7 +93,6 @@ router.post("/signin", async (req, res) => {
         bio: user.bio,
         email: user.email,
         profileImg: user.profileImg,
-        gallery: user.gallery,
         approved: user.approved,
         type: user.type,
       },
@@ -81,7 +118,7 @@ router.post("/signup", signUpFields, async (req, res) => {
     if (isValid === false) {
       return;
     }
-    const duplicate = await models.InfluencerModel.findOne({
+    const duplicate = await InfluencerModel.findOne({
       email: req.body.email.toLowerCase(),
     });
     if (duplicate) {
@@ -104,7 +141,7 @@ router.post("/signup", signUpFields, async (req, res) => {
       })
       .toFile("./static/" + req.files.profileImage[0].originalname);
     const hash = await bcrypt.hash(req.body.password, 12);
-    const user = new models.InfluencerModel({
+    const user = new InfluencerModel({
       name: req.body.name,
       email: req.body.email.toLowerCase(),
       dialCode: req.body.dialCode,
@@ -126,7 +163,7 @@ router.post("/bio", async (req, res) => {
       return res.json({ access: "restricted" });
     }
 
-    const updated = await models.InfluencerModel.findOneAndUpdate(
+    const updated = await InfluencerModel.findOneAndUpdate(
       { _id: req.session.userId },
       { bio: req.body.bio },
       { new: true }
@@ -152,7 +189,6 @@ router.post(
           height: 1080,
         })
         .toFile("./static/" + req.file.originalname);
-
       const updated = await models.InfluencerModel.findOneAndUpdate(
         { _id: req.session.userId },
         {
@@ -167,47 +203,29 @@ router.post(
   }
 );
 
-router.post(
-  "/galleryImage",
-  upload.single("galleryImage"),
-  async (req, res) => {
-    try {
-      if (!req.session.userId) {
-        console.log("Restricted route");
-        return res.json({ access: "restricted" });
-      }
-      await sharp(req.file.buffer)
-        .resize({
-          width: 1080,
-          height: 1080,
-        })
-        .toFile("./static/" + req.file.originalname);
-
-      const imageModel = models.ImageModel({
-        influencer: req.session.userId,
-        path: "static/" + req.file.originalname,
-        likes: [],
-      });
-      const newImage = await imageModel.save();
-
-      const updated = await models.InfluencerModel.findOneAndUpdate(
-        { _id: req.session.userId },
-        {
-          $push: { gallery: newImage._id },
-        },
-        { new: true }
-      ).populate({
-        path: "gallery",
-        populate: {
-          path: "likes",
-        },
-      });
-      return res.json({ success: true, user: updated });
-    } catch (error) {
-      console.log(error);
+router.post("/gallery", upload.single("galleryImage"), async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("Restricted route");
+      return res.json({ access: "restricted" });
     }
+    await sharp(req.file.buffer)
+      .resize({
+        width: 1080,
+        height: 1080,
+      })
+      .toFile("./static/" + req.file.originalname);
+
+    const imageModel = new ImageModel({
+      influencer: req.session.userId,
+      path: "static/" + req.file.originalname,
+    });
+    const newImage = await imageModel.save();
+    return res.json({ image: newImage });
+  } catch (error) {
+    console.log(error);
   }
-);
+});
 router.post("/like", async (req, res) => {
   try {
     if (!req.session.userId) {
@@ -215,65 +233,30 @@ router.post("/like", async (req, res) => {
       return res.json({ access: "restricted" });
     }
 
-    console.log("image id:", req.body.imageId);
-
-    const like = await models.LikesModel.findOne({
+    const like = await LikeModel.findOne({
       from: req.session.userId,
       image: req.body.imageId,
     });
 
     if (like) {
-      await models.LikesModel.deleteOne({ _id: like._id });
-      const newImage = await models.ImageModel.findOneAndUpdate(
-        { _id: req.body.imageId },
-        {
-          $pull: { likes: like._id },
-        },
-        { new: true }
-      );
+      await LikeModel.deleteOne({ _id: like._id });
       console.log("unliked", req.body.imageId);
-      return res.json({ action: "unlike", image: newImage });
+      return res.json({ action: "unlike", like: like });
     }
-    const likeModel = new models.LikesModel({
+    const likeModel = new LikeModel({
+      influencer: req.body.influencerId,
       from: req.session.userId,
       image: req.body.imageId,
     });
 
     const newLike = await likeModel.save();
-    const newImage = await models.ImageModel.findOneAndUpdate(
-      { _id: req.body.imageId },
-      {
-        $push: { likes: newLike._id },
-      },
-      { new: true }
-    );
     console.log("Liked", req.body.imageId);
-    return res.json({ action: "like", image: newImage });
+    return res.json({ action: "like", like: newLike });
   } catch (error) {
     console.log(error);
   }
 });
 
 // GET influencers
-router.get("/", async (req, res) => {
-  try {
-    if (!req.session.userId) {
-      console.log("restricted route");
-      return res.json({ access: "restricted" });
-    }
-    const influencers = await models.InfluencerModel.find()
-      .select("id name bio email profileImg gallery approved type")
-      .populate({
-        path: "gallery",
-        populate: {
-          path: "likes",
-        },
-      });
 
-    // console.log("fetched influencers", influencers[0].gallery);
-    return res.json({ success: true, influencers: influencers });
-  } catch (error) {
-    console.log(error);
-  }
-});
 module.exports = router;

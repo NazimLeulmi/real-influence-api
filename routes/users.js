@@ -1,6 +1,6 @@
 const express = require("express");
 const validation = require("../validation");
-const models = require("../models");
+const models = require("../models/like");
 const bcrypt = require("bcrypt");
 const router = express.Router();
 

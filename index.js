@@ -1,16 +1,15 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const validation = require("./validation");
-const models = require("./models");
-const bcrypt = require("bcrypt");
 const session = require("express-session");
 const helmet = require("helmet");
 const compression = require("compression");
 const cors = require("cors");
 const MongoStore = require("connect-mongo");
 const influencers = require("./routes/influencers");
-const users = require("./routes/users");
-const admins = require("./routes/admins");
+// const users = require("./routes/users");
+// const admins = require("./routes/admins");
+const UserModel = require("./models/user");
+const InfluencerModel = require("./models/influencer");
 
 let app = express();
 // cross origin scripting
@@ -64,8 +63,8 @@ app.use(
 );
 
 app.use("/influencers", influencers);
-app.use("/users", users);
-app.use("/admins", admins);
+// app.use("/users", users);
+// app.use("/admins", admins);
 
 app.get("/", async (req, res) => {
   res.send("<h1>Real Influence</h1>");
@@ -74,8 +73,8 @@ app.get("/", async (req, res) => {
 app.get("/check-auth", async (req, res) => {
   try {
     if (req.session.userId) {
-      const user = await models.UserModel.findById(req.session.userId).catch(
-        (err) => console.log(err)
+      const user = await UserModel.findById(req.session.userId).catch((err) =>
+        console.log(err)
       );
       if (user) {
         return res.json({
@@ -88,14 +87,7 @@ app.get("/check-auth", async (req, res) => {
           },
         });
       }
-      const influencer = await models.InfluencerModel.findById(
-        req.session.userId
-      ).populate({
-        path: "gallery",
-        populate: {
-          path: "likes",
-        },
-      });
+      const influencer = await InfluencerModel.findById(req.session.userId);
       if (influencer) {
         return res.json({
           success: true,
@@ -104,7 +96,6 @@ app.get("/check-auth", async (req, res) => {
             name: influencer.name,
             bio: influencer.bio,
             email: influencer.email,
-            gallery: influencer.gallery,
             profileImg: influencer.profileImg,
             type: influencer.type,
           },
