@@ -189,7 +189,7 @@ router.post(
           height: 1080,
         })
         .toFile("./static/" + req.file.originalname);
-      const updated = await models.InfluencerModel.findOneAndUpdate(
+      const updated = await InfluencerModel.findOneAndUpdate(
         { _id: req.session.userId },
         {
           profileImg: "static/" + req.file.originalname,

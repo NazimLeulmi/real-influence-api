@@ -1,8 +1,8 @@
 const express = require("express");
 const validation = require("../validation");
-const models = require("../models/like");
 const bcrypt = require("bcrypt");
 const router = express.Router();
+const UserModel = require("../models/user");
 
 router.post("/signup", async (req, res) => {
   try {
@@ -11,7 +11,7 @@ router.post("/signup", async (req, res) => {
     if (isValid === false) {
       return;
     }
-    const duplicate = await models.UserModel.findOne({
+    const duplicate = await UserModel.findOne({
       email: req.body.email.toLowerCase(),
     });
     if (duplicate) {
@@ -22,7 +22,7 @@ router.post("/signup", async (req, res) => {
       });
     }
     const hash = await bcrypt.hash(req.body.password, 12);
-    const user = new models.UserModel({
+    const user = new UserModel({
       name: req.body.name,
       email: req.body.email.toLowerCase(),
       dialCode: req.body.dialCode,
@@ -39,9 +39,10 @@ router.post("/signup", async (req, res) => {
 
 router.post("/signin", async (req, res) => {
   try {
+    console.log("Signing in user");
     const { isValid, errors } = validation.validateSignIn(req.body.email);
     if (!isValid) return res.json({ isValid: false, errors });
-    const user = await models.UserModel.findOne({
+    const user = await UserModel.findOne({
       email: req.body.email.toLowerCase(),
     });
     if (!user) {

@@ -6,7 +6,7 @@ const compression = require("compression");
 const cors = require("cors");
 const MongoStore = require("connect-mongo");
 const influencers = require("./routes/influencers");
-// const users = require("./routes/users");
+const users = require("./routes/users");
 // const admins = require("./routes/admins");
 const UserModel = require("./models/user");
 const InfluencerModel = require("./models/influencer");
@@ -37,7 +37,7 @@ app.use(express.json({ limit: "50mb" }));
 // Mongo Database Connection
 connectDB().catch((err) => console.log(err));
 async function connectDB() {
-  await mongoose.connect("mongodb://localhost:27017/real-influence");
+  await mongoose.connect("mongodb://localhost:1999/real-influence");
   console.log("Connected to Mongo Database");
 }
 
@@ -63,7 +63,7 @@ app.use(
 );
 
 app.use("/influencers", influencers);
-// app.use("/users", users);
+app.use("/users", users);
 // app.use("/admins", admins);
 
 app.get("/", async (req, res) => {
