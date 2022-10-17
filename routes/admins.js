@@ -1,24 +1,31 @@
 const express = require("express");
 const validation = require("../validation");
-const models = require("../models/like");
 const bcrypt = require("bcrypt");
 const router = express.Router();
+const AdminModel = require("../models/admin");
+const InfluencerModel = require("../models/influencer");
 
 router.get("/", async (req, res) => {
   if (!req.session.adminId) {
-    console.log(req.session);
     console.log("restricted route");
-    return res.json({ access: "restricted" });
+    return res.json({ admins: null, admin: null });
   }
-  const admins = await models.AdminModel.find();
-  return res.json({ success: true, admins: admins });
+  const admin = await AdminModel.findById(req.session.adminId).select(
+    "username email super"
+  );
+  if (!admin || admin.super === false) {
+    console.log("restricted route");
+    return res.json({ admins: null, admin: null });
+  }
+  const admins = await AdminModel.find();
+  return res.json({ admins: admins, admin: admin });
 });
 
 router.post("/signup", async (req, res) => {
   const { isValid, errors } = validation.validateAdminSignUp(req.body);
   if (!isValid) return res.json({ isValid, errors });
   try {
-    let dupUser = await models.AdminModel.findOne({ email: req.body.email });
+    let dupUser = await AdminModel.findOne({ email: req.body.email });
     if (dupUser)
       return res.json({
         isValid: false,
@@ -26,7 +33,7 @@ router.post("/signup", async (req, res) => {
       });
     const { email, password, username } = req.body;
     const hash = await bcrypt.hash(password, 12);
-    const newAdmin = new models.AdminModel({
+    const newAdmin = new AdminModel({
       email: email,
       username: username,
       password: hash,
@@ -42,13 +49,14 @@ router.post("/signup", async (req, res) => {
 });
 
 router.post("/signin", async (req, res) => {
-  console.log("Admin Sign in");
+  console.log(req.body);
   const { isValid, errors } = validation.validateSignIn(req.body.email);
   if (!isValid) return res.json({ isValid: false, errors });
-  const admin = await models.AdminModel.findOne({
+  const admin = await AdminModel.findOne({
     email: req.body.email.toLowerCase(),
   });
   if (!admin) {
+    console.log(admin);
     return res.json({
       isValid: false,
       error: "The user doesn't exist",
@@ -74,17 +82,17 @@ router.post("/signin", async (req, res) => {
   });
 });
 
-router.delete("/delete", async (req, res) => {
+router.post("/delete", async (req, res) => {
   if (!req.session.adminId) {
     return res.json({ access: "restricted" });
   }
-  const superAdmin = await models.AdminModel.findById(req.session.adminId);
+  const superAdmin = await AdminModel.findById(req.session.adminId);
   if (superAdmin.super === false) {
     console.log("Restricted Access");
     return res.json({ access: "restricted" });
   }
 
-  const admin = await models.AdminModel.findById(req.body.id);
+  const admin = await AdminModel.findById(req.body.id);
   if (admin.super === true) {
     console.log("You can't delete a super admin");
     return res.json({ access: "restricted" });
@@ -93,14 +101,6 @@ router.delete("/delete", async (req, res) => {
   await admin.delete();
 
   return res.json({ success: true });
-
-  // const updated = await models.UserModel.findOneAndUpdate(
-  //   { _id: req.body.id },
-  //   { approved: true },
-  //   { new: true }
-  // ).select("id name bio email profileImg approved");
-  // console.log(updated, "Approved");
-  // return res.json({ success: true, user: updated });
 });
 
 router.post("/approve", async (req, res) => {
@@ -108,7 +108,7 @@ router.post("/approve", async (req, res) => {
     return res.json({ access: "restricted" });
   }
 
-  const updated = await models.UserModel.findOneAndUpdate(
+  const updated = await InfluencerModel.findOneAndUpdate(
     { _id: req.body.id },
     { approved: true },
     { new: true }
@@ -121,7 +121,7 @@ router.post("/revoke", async (req, res) => {
     return res.json({ access: "restricted" });
   }
 
-  const updated = await models.UserModel.findOneAndUpdate(
+  const updated = await InfluencerModel.findOneAndUpdate(
     { _id: req.body.id },
     { approved: false },
     { new: true }
@@ -131,14 +131,38 @@ router.post("/revoke", async (req, res) => {
 });
 router.get("/influencers", async (req, res) => {
   if (!req.session.adminId) {
-    console.log(req.session);
     console.log("restricted route");
-    return res.json({ access: "restricted" });
+    return res.json({ admin: null, influencers: null });
   }
-  const users = await models.UserModel.find().select(
+
+  const admin = await AdminModel.findById(req.session.adminId).select(
+    "username email super"
+  );
+  if (!admin) {
+    console.log("restricted route");
+    return res.json({ admin: null, influencers: null });
+  }
+  const influencers = await InfluencerModel.find().select(
     "id name bio email profileImg approved"
   );
-  return res.json({ success: true, influencers: users });
+  return res.json({ admin: admin, influencers: influencers });
+});
+router.get("/check-auth", async (req, res) => {
+  console.log("Checking admin auth");
+  try {
+    if (req.session.adminId) {
+      const admin = await AdminModel.findById(req.session.adminId).select(
+        "username email super"
+      );
+      console.log("Admin is signed in");
+      return res.json({ admin: admin });
+    } else {
+      console.log("Admin isn't signed in");
+      return res.json({ admin: null });
+    }
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 module.exports = router;

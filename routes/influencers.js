@@ -8,6 +8,8 @@ const multer = require("multer");
 const InfluencerModel = require("../models/influencer");
 const ImageModel = require("../models/image");
 const LikeModel = require("../models/like");
+const AdminModel = require("../models/admin");
+const VotesModel = require("../models/vote");
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -30,7 +32,19 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/likes/:id", async (req, res) => {
+router.get("/:id/likes", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const likes = await LikeModel.find({ influencer: req.params.id });
+    return res.json({ likes: likes });
+  } catch (error) {
+    console.log(error);
+  }
+});
+router.get("/:id/votes", async (req, res) => {
   try {
     if (!req.session.userId) {
       console.log("restricted route");
@@ -43,7 +57,7 @@ router.get("/likes/:id", async (req, res) => {
   }
 });
 
-router.get("/gallery/:id", async (req, res) => {
+router.get("/:id/gallery", async (req, res) => {
   try {
     if (!req.session.userId) {
       console.log("restricted route");
@@ -209,6 +223,7 @@ router.post("/gallery", upload.single("galleryImage"), async (req, res) => {
       console.log("Restricted route");
       return res.json({ access: "restricted" });
     }
+    console.log(req.body);
     await sharp(req.file.buffer)
       .resize({
         width: 1080,
@@ -226,6 +241,28 @@ router.post("/gallery", upload.single("galleryImage"), async (req, res) => {
     console.log(error);
   }
 });
+
+router.delete("/gallery/:id", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("Restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const { id } = req.params;
+    const image = await ImageModel.findById(id);
+    if (req.session.userId !== image.influencer.toHexString()) {
+      console.log("Restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const deleted = await image.delete();
+    return res.json({ image: deleted });
+
+    // await LikeModel.deleteOne({ _id: like._id });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 router.post("/like", async (req, res) => {
   try {
     if (!req.session.userId) {
@@ -255,6 +292,22 @@ router.post("/like", async (req, res) => {
   } catch (error) {
     console.log(error);
   }
+});
+
+router.post("/delete", async (req, res) => {
+  console.log("Deleting influencer");
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+  const superAdmin = await AdminModel.findById(req.session.adminId);
+  if (!superAdmin || superAdmin.super === false) {
+    console.log("Restricted Access");
+    return res.json({ access: "restricted" });
+  }
+  const deleted = await InfluencerModel.deleteOne({ _id: req.body.id });
+  console.log(deleted, "deleted");
+
+  return res.json({ success: true });
 });
 
 // GET influencers
