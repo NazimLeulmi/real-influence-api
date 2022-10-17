@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const router = express.Router();
 const AdminModel = require("../models/admin");
 const InfluencerModel = require("../models/influencer");
+const UserModel = require("../models/user");
 
 router.get("/", async (req, res) => {
   if (!req.session.adminId) {
@@ -129,6 +130,32 @@ router.post("/revoke", async (req, res) => {
   console.log(updated, "Revoked");
   return res.json({ success: true, user: updated });
 });
+
+router.post("/user/approve", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: req.body.id },
+    { approved: true },
+    { new: true }
+  ).select("id name email approved");
+  console.log(updated, "Approved");
+  return res.json({ success: true, user: updated });
+});
+router.post("/user/revoke", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: req.body.id },
+    { approved: false },
+    { new: true }
+  ).select("id name email approved");
+  console.log(updated, "Revoked");
+  return res.json({ success: true, user: updated });
+});
 router.get("/influencers", async (req, res) => {
   if (!req.session.adminId) {
     console.log("restricted route");
@@ -146,6 +173,23 @@ router.get("/influencers", async (req, res) => {
     "id name bio email profileImg approved"
   );
   return res.json({ admin: admin, influencers: influencers });
+});
+router.get("/users", async (req, res) => {
+  console.log("Getting users");
+  if (!req.session.adminId) {
+    console.log("restricted route");
+    return res.json({ admin: null, influencers: null });
+  }
+
+  const admin = await AdminModel.findById(req.session.adminId).select(
+    "username email super"
+  );
+  if (!admin) {
+    console.log("restricted route");
+    return res.json({ admin: null, influencers: null });
+  }
+  const users = await UserModel.find().select("id name email approved");
+  return res.json({ admin: admin, users: users });
 });
 router.get("/check-auth", async (req, res) => {
   console.log("Checking admin auth");
