@@ -10,6 +10,8 @@ const users = require("./routes/users");
 const admins = require("./routes/admins");
 const UserModel = require("./models/user");
 const InfluencerModel = require("./models/influencer");
+require("dotenv").config();
+const nodemailer = require("nodemailer");
 
 let app = express();
 // cross origin scripting
@@ -37,7 +39,7 @@ app.use(express.json({ limit: "50mb" }));
 // Mongo Database Connection
 connectDB().catch((err) => console.log(err));
 async function connectDB() {
-  await mongoose.connect("mongodb://localhost:27017/real-influence");
+  await mongoose.connect(process.env.DB);
   console.log("Connected to Mongo Database");
 }
 

@@ -9,7 +9,7 @@ const InfluencerModel = require("../models/influencer");
 const ImageModel = require("../models/image");
 const LikeModel = require("../models/like");
 const AdminModel = require("../models/admin");
-const VotesModel = require("../models/vote");
+const VoteModel = require("../models/vote");
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -50,8 +50,9 @@ router.get("/:id/votes", async (req, res) => {
       console.log("restricted route");
       return res.json({ access: "restricted" });
     }
-    const likes = await LikeModel.find({ influencer: req.params.id });
-    return res.json({ likes: likes });
+    const votes = await VoteModel.find({ influencer: req.params.id });
+    console.log("Fetched Votes", votes);
+    return res.json({ votes: votes });
   } catch (error) {
     console.log(error);
   }
@@ -289,6 +290,35 @@ router.post("/like", async (req, res) => {
     const newLike = await likeModel.save();
     console.log("Liked", req.body.imageId);
     return res.json({ action: "like", like: newLike });
+  } catch (error) {
+    console.log(error);
+  }
+});
+router.post("/:id/votes", async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      console.log("restricted route");
+      return res.json({ access: "restricted" });
+    }
+    const { id } = req.params;
+    const vote = await VoteModel.findOne({
+      user: req.session.userId,
+      influencer: id,
+    });
+
+    if (vote) {
+      await VoteModel.deleteOne({ _id: vote._id });
+      console.log("vote down");
+      return res.json({ action: "down", vote: vote });
+    }
+    const voteModel = new VoteModel({
+      user: req.session.userId,
+      influencer: id,
+    });
+
+    const newVote = await voteModel.save();
+    console.log("vote up");
+    return res.json({ action: "up", vote: newVote });
   } catch (error) {
     console.log(error);
   }
