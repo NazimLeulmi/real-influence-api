@@ -35,6 +35,18 @@ app.use(helmet({
 // compression
 app.use(compression());
 
+
+// Headers
+app.set("trust proxy", 1);
+app.use(function (req, res, next) {
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header("Access-Control-Allow-Origin", "https://adm.realinfluence.io");
+  res.header("Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-HTTP-Method-Override, Set-Cookie, Cookie");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  next();
+});
+
 app.use("/static", express.static("static"));
 
 app.use(express.json({ limit: "50mb" }));
@@ -57,11 +69,12 @@ app.use(
       collectionName: "express-sessions",
       ttl: 480 * 60 * 1000,
     }),
-    // proxy: true,
-    // maxAge : 8 hours
+    proxy: true,
     cookie: {
-      secure: false,
-      maxAge: 480 * 60 * 1000,
+      secure: true,
+      domain: ".realinfluence.io",
+      sameSite: "none",
+      maxAge: 480 * 60 * 1000, // 8 hours
       httpOnly: true,
     },
   })
