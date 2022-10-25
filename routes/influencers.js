@@ -329,8 +329,8 @@ router.post("/delete", async (req, res) => {
   if (!req.session.adminId) {
     return res.json({ access: "restricted" });
   }
-  const superAdmin = await AdminModel.findById(req.session.adminId);
-  if (!superAdmin || superAdmin.super === false) {
+  const admin = await AdminModel.findById(req.session.adminId);
+  if (!admin) {
     console.log("Restricted Access");
     return res.json({ access: "restricted" });
   }

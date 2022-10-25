@@ -28,7 +28,10 @@ app.use(
 );
 
 // security layer
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+}));
+
 // compression
 app.use(compression());
 

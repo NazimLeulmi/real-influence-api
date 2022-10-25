@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const router = express.Router();
 const UserModel = require("../models/user");
 const transporter = require("../smtp");
+const makeTemplate = require("../email");
 
 function getOTP() {
   // Declare a digits variable
@@ -45,12 +46,12 @@ router.post("/signup", async (req, res) => {
       otp: otp,
     });
     // send mail with defined transport object
+    const template = makeTemplate(otp);
     let info = await transporter.sendMail({
-      from: '"Fred Foo 👻" <leulminaz@outlook.com>', // sender address
+      from: '"Real Influence 👻" <leulminaz@outlook.com>',
       to: "leulminaz@outlook.com", // list of receivers
-      subject: "Hello ✔", // Subject line
-      text: "Hello world?", // plain text body
-      html: "<b>Hello world?</b>", // html body
+      subject: "Email Verification ✔", // Subject line
+      html: template,
     });
     console.log(info, "email info");
     const newUser = await user.save();
@@ -102,5 +103,14 @@ router.post("/signin", async (req, res) => {
   } catch (err) {
     console.log(err);
   }
+});
+
+router.post("/delete", async (req, res) => {
+  if (!req.session.adminId) {
+    return res.json({ access: "restricted" });
+  }
+  const deleted = await UserModel.deleteOne({ _id: req.body.id });
+  console.log(deleted, "deleted");
+  return res.json({ success: true });
 });
 module.exports = router;
