@@ -11,7 +11,7 @@ function getOTP() {
   // which stores all digits
   var digits = "0123456789";
   let OTP = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 5; i++) {
     OTP += digits[Math.floor(Math.random() * 10)];
   }
   return OTP;
@@ -48,9 +48,9 @@ router.post("/signup", async (req, res) => {
     // send mail with defined transport object
     const template = makeTemplate(otp);
     let info = await transporter.sendMail({
-      from: '"Real Influence 👻" <leulminaz@outlook.com>',
-      to: "leulminaz@outlook.com", // list of receivers
-      subject: "Email Verification ✔", // Subject line
+      from: '"Real Influence 👻" <realinfluence@outlook.com>',
+      to: "leulminaz@gmail.com", // list of receivers
+      subject: "Account Verification ✔", // Subject line
       html: template,
     });
     console.log(info, "email info");
@@ -60,6 +60,8 @@ router.post("/signup", async (req, res) => {
     console.log(error);
   }
 });
+
+
 
 router.post("/signin", async (req, res) => {
   try {
@@ -112,5 +114,25 @@ router.post("/delete", async (req, res) => {
   const deleted = await UserModel.deleteOne({ _id: req.body.id });
   console.log(deleted, "deleted");
   return res.json({ success: true });
+});
+
+router.post("/otp", async (req, res) => {
+  try {
+    console.log(req.body, "body");
+    const user = await UserModel.findOne({ email: req.body.email.toLowerCase() });
+    console.log(user, "trying to approve")
+    if (user.otp === req.body.otp) {
+      user.approved = true;
+      user.otp = null;
+      approvedUser = await user.save();
+      console.log("approved user", user);
+      return res.json({ success: true, error: null });
+    } else {
+      return res.json({ success: false, error: "The OTP is incorrect" });
+    }
+  } catch (err) {
+    console.log(err);
+    return res.json({ success: false })
+  }
 });
 module.exports = router;

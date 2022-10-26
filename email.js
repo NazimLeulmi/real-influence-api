@@ -1,7 +1,7 @@
 function makeTemplate(otp) {
   return /*html*/ `
         <main>
-        <img src="http://localhost:8888/static/logo.png" alt="logo" />
+        <img src="https://realinfluence.io/static/logo.png" alt="logo" height="65" width="65" />
         <h1>Verify your email address</h1>
         <p>
           In order to start using your account, you need to confirm your email

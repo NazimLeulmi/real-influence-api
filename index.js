@@ -69,11 +69,11 @@ app.use(
       collectionName: "express-sessions",
       ttl: 480 * 60 * 1000,
     }),
-    proxy: true,
+    // proxy: true,
     cookie: {
-      secure: true,
-      domain: ".realinfluence.io",
-      sameSite: "none",
+      // secure: true,
+      // domain: ".realinfluence.io",
+      // sameSite: "none",
       maxAge: 480 * 60 * 1000, // 8 hours
       httpOnly: true,
     },
