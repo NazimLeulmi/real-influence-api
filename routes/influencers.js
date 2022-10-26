@@ -183,7 +183,17 @@ router.post("/bio", async (req, res) => {
       { bio: req.body.bio },
       { new: true }
     );
-    return res.json({ success: true, user: updated });
+    return res.json({
+      success: true, user: {
+        id: updated._id,
+        name: updated.name,
+        bio: updated.bio,
+        email: updated.email,
+        profileImg: updated.profileImg,
+        approved: updated.approved,
+        type: updated.type,
+      }
+    });
   } catch (error) {
     console.log(error);
   }
@@ -211,7 +221,17 @@ router.post(
         },
         { new: true }
       );
-      return res.json({ success: true, user: updated });
+      return res.json({
+        success: true, user: {
+          id: updated._id,
+          name: updated.name,
+          bio: updated.bio,
+          email: updated.email,
+          profileImg: updated.profileImg,
+          approved: updated.approved,
+          type: updated.type,
+        }
+      });
     } catch (error) {
       console.log(error);
     }
