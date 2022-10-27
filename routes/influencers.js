@@ -31,6 +31,17 @@ router.get("/", async (req, res) => {
     console.log(error);
   }
 });
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const influencer = await InfluencerModel.findById(id).select(
+      "id name bio email profileImg approved type"
+    );
+    return res.json({ influencer: influencer });
+  } catch (error) {
+    console.log(error);
+  }
+});
 
 router.get("/:id/likes", async (req, res) => {
   try {
