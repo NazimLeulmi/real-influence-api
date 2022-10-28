@@ -8,10 +8,10 @@ const MongoStore = require("connect-mongo");
 const influencers = require("./routes/influencers");
 const users = require("./routes/users");
 const admins = require("./routes/admins");
+const share = require("./routes/share");
 const UserModel = require("./models/user");
 const InfluencerModel = require("./models/influencer");
 require("dotenv").config();
-const nodemailer = require("nodemailer");
 
 let app = express();
 // cross origin scripting
@@ -80,6 +80,7 @@ app.use(
   })
 );
 
+app.use("/share", share);
 app.use("/influencers", influencers);
 app.use("/users", users);
 app.use("/admins", admins);

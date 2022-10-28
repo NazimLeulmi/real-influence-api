@@ -17,6 +17,7 @@ const upload = multer({
   limits: { fieldSize: 100 * 1024 * 1024 },
 });
 
+
 router.get("/", async (req, res) => {
   try {
     if (!req.session.userId) {
@@ -370,6 +371,9 @@ router.post("/delete", async (req, res) => {
 
   return res.json({ success: true });
 });
+
+
+
 
 // GET influencers
 
