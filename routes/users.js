@@ -3,12 +3,9 @@ const validation = require("../validation");
 const bcrypt = require("bcrypt");
 const router = express.Router();
 const UserModel = require("../models/user");
-const transporter = require("../smtp");
-const makeTemplate = require("../email");
+const sendMail = require("../smtp");
 
 function getOTP() {
-  // Declare a digits variable
-  // which stores all digits
   var digits = "0123456789";
   let OTP = "";
   for (let i = 0; i < 5; i++) {
@@ -36,6 +33,7 @@ router.post("/signup", async (req, res) => {
     }
     const hash = await bcrypt.hash(req.body.password, 12);
     const otp = getOTP();
+    sendMail(otp, req.body.email.toLowerCase());
     const user = new UserModel({
       name: req.body.name,
       email: req.body.email.toLowerCase(),
@@ -45,15 +43,6 @@ router.post("/signup", async (req, res) => {
       password: hash,
       otp: otp,
     });
-    // send mail with defined transport object
-    const template = makeTemplate(otp);
-    let info = await transporter.sendMail({
-      from: '"Real Influence 👻" <realinfluence@outlook.com>',
-      to: "leulminaz@gmail.com", // list of receivers
-      subject: "Account Verification ✔", // Subject line
-      html: template,
-    });
-    console.log(info, "email info");
     const newUser = await user.save();
     return res.json({ success: true });
   } catch (error) {

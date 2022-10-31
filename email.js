@@ -7,7 +7,7 @@ function makeTemplate(otp) {
           In order to start using your account, you need to confirm your email
           address.
         </p>
-        <div>OTP [${otp}]</div>
+        <h1>OTP ${otp} </h1>
         </main>
   `;
 }
