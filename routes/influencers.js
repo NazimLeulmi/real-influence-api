@@ -367,12 +367,12 @@ router.post("/delete", async (req, res) => {
     return res.json({ access: "restricted" });
   }
   const deleted = await InfluencerModel.deleteOne({ _id: req.body.id });
-  console.log(deleted, "deleted");
+  const deletedLikes = await LikeModel.remove({ influencer: req.body.id });
+  const deletedImages = await ImageModel.remove({ influencer: req.body.id });
+  const deletedVotes = await VoteModel.remove({ influencer: req.body.id });
 
   return res.json({ success: true });
 });
-
-
 
 
 // GET influencers

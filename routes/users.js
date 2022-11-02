@@ -5,6 +5,7 @@ const router = express.Router();
 const UserModel = require("../models/user");
 const sendMail = require("../smtp");
 
+
 function getOTP() {
   var digits = "0123456789";
   let OTP = "";
@@ -97,12 +98,17 @@ router.post("/signin", async (req, res) => {
 });
 
 router.post("/delete", async (req, res) => {
-  if (!req.session.adminId) {
-    return res.json({ access: "restricted" });
+  try {
+    if (!req.session.adminId) {
+      return res.json({ access: "restricted" });
+    }
+    const deleted = await UserModel.deleteOne({ _id: req.body.id });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.log(err);
+    return res.json({ error: err })
   }
-  const deleted = await UserModel.deleteOne({ _id: req.body.id });
-  console.log(deleted, "deleted");
-  return res.json({ success: true });
 });
 
 router.post("/otp", async (req, res) => {

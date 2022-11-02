@@ -9,6 +9,7 @@ const influencers = require("./routes/influencers");
 const users = require("./routes/users");
 const admins = require("./routes/admins");
 const share = require("./routes/share");
+const stats = require("./routes/stats");
 const UserModel = require("./models/user");
 const InfluencerModel = require("./models/influencer");
 require("dotenv").config();
@@ -19,9 +20,8 @@ let app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:8888",
-      "http://localhost:3000",
-      "http://localhost",
+      "https://realinfluence.io",
+      "https://adm.realinfluence.io",
     ],
     credentials: true,
   })
@@ -69,17 +69,18 @@ app.use(
       collectionName: "express-sessions",
       ttl: 480 * 60 * 1000,
     }),
-    // proxy: true,
+    proxy: true,
     cookie: {
-      // secure: true,
-      // domain: ".realinfluence.io",
-      // sameSite: "none",
+      secure: true,
+      domain: ".realinfluence.io",
+      sameSite: "none",
       maxAge: 480 * 60 * 1000, // 8 hours
       httpOnly: true,
     },
   })
 );
 
+app.use("/stats", stats);
 app.use("/share", share);
 app.use("/influencers", influencers);
 app.use("/users", users);
