@@ -137,6 +137,8 @@ const signUpFields = upload.fields([
   { name: "number" },
   { name: "password" },
   { name: "passwordc" },
+  { name: "instagram" },
+  { name: "tiktok" },
   { name: "profileImage" },
 ]);
 router.post("/signup", signUpFields, async (req, res) => {
@@ -176,6 +178,8 @@ router.post("/signup", signUpFields, async (req, res) => {
       number: req.body.number,
       password: hash,
       profileImg: "static/" + req.files.profileImage[0].originalname,
+      instagram: "https://instagram.com/" + req.body.instagram,
+      instagram: req.body.tiktok ? "https://tiktok.com/@" + req.body.tiktok : null
     });
     const newInfluencer = await user.save();
     return res.json({ success: true });

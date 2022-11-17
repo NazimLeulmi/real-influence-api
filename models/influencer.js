@@ -14,6 +14,8 @@ const influencerSchema = new Schema(
     dialCode: { type: String, required: true },
     number: { type: String, required: true },
     password: { type: String, required: true },
+    instagram: { type: String, required: true },
+    tiktok: { type: String, required: false },
     approved: { type: Boolean, default: false },
     type: { type: String, default: "influencer" },
     profileImg: { type: String },
