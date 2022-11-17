@@ -140,7 +140,7 @@ router.get("/influencers", async (req, res) => {
     return res.json({ influencers: null });
   }
   const influencers = await InfluencerModel.find().select(
-    "id name bio email profileImg approved"
+    "id name email instagram tiktok profileImg approved"
   );
   return res.json({ influencers: influencers });
 });
